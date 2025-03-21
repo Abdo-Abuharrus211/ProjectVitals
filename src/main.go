@@ -7,6 +7,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+    progress "github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
 )
 
@@ -16,6 +17,8 @@ const refreshInterval = time.Second // Update interval
 type model struct {
 	cursor     int
 	spinner    SpinnerModel
+    progressBar progress.Model
+
 	PCName     string
 	OSName     string
 	OSVersion  string
@@ -33,14 +36,17 @@ type model struct {
 
 // Initializes the model
 func initialModel() model {
+    pbar := progress.New(progress.WithDefaultGradient())
 	spin := spinner.New()
-	spin.Spinner = spinner.Pulse // Default spinner type
+	spin.Spinner = spinner.Line // Default spinner type
 	spin.Style = spinnerStyle
 
 	return model{
-		cursor:  0,
-		spinner: SpinnerModel{Spinner: spin},
-	}
+        cursor:      0,
+        spinner:     SpinnerModel{Spinner: spin},
+        progressBar: pbar,
+    }
+    
 }
 
 // Init function runs on program start
@@ -82,13 +88,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.DiskTotal = diskTotal
 		m.DiskUsed = diskUsed
 
-		return m, refresh() // Schedule next refresh
-
+        diskUsage := 0.0
+        if m.DiskTotal > 0 {
+            diskUsage = float64(m.DiskUsed) / float64(m.DiskTotal)
+        }
+        progressCmd := m.progressBar.SetPercent(diskUsage)
+        return m, tea.Batch(refresh(), progressCmd)
+    case progress.FrameMsg:
+        progressModel, progressCmd := m.progressBar.Update(msg)
+        m.progressBar = progressModel.(progress.Model)
+        return m, progressCmd
+        
 	case spinner.TickMsg:
 		var spinCmd tea.Cmd
 		m.spinner.Spinner, spinCmd = m.spinner.Spinner.Update(msg)
 		return m, spinCmd
-	}
+    }
 
 	return m, cmd
 }
@@ -115,13 +130,13 @@ func (m model) View() string {
         diskUsagePercent = (float64(m.DiskUsed) / float64(m.DiskTotal)) * 100
     }
     s += fmt.Sprintf("%s%s\n", labelStyle("Disk Usage: "), textStyle(fmt.Sprintf("%.1f%%", diskUsagePercent)))
-    s += RenderProgressBar(diskUsagePercent, 40) + "\n"
+    s += m.progressBar.View() + "\n" // Use the model’s instance of the progress bar
     s += fmt.Sprintf("%s%s\n", labelStyle("Disk Free: "), textStyle(fmt.Sprintf("%.2f GB", float64(m.DiskTotal-m.DiskUsed)/math.Pow10(9))))
     // Uncomment the following lines if GPU stats become available
     // s += fmt.Sprintf("%s%s\n", labelStyle("GPU: "), textStyle(m.GPUName))
     // s += fmt.Sprintf("%s%s\n", labelStyle("GPU Usage: "), textStyle(fmt.Sprintf("%.1f%%", m.GPUPercent)))
     // s += fmt.Sprintf("%s%s\n", labelStyle("GPU Temperature: "), textStyle(fmt.Sprintf("%.1f°C", m.GPUTemp)))
-    s += "\nPress q to quit\n"
+    s += fmt.Sprintf("\n%s\n", helpStyle("Press `q` to quit"))
     s = terminalStyle.Render(s)
     return s
 }
