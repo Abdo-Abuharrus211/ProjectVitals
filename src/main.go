@@ -1,93 +1,78 @@
 package main
 
-import(
+import (
 	"fmt"
-	"os"
 	"math"
+	"os"
 	"time"
+
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbles/spinner"
 )
 
-const refreshInterval = time.Second // this is 1 sec
+const refreshInterval = time.Second // Update interval
 
+// Model struct to store app state
+type model struct {
+	cursor     int
+	spinner    SpinnerModel
+	PCName     string
+	OSName     string
+	OSVersion  string
+	CPUName    string
+	CPUPercent float64
+	CPUTemp    float64
+	MemTotal   uint64
+	MemPercent float64
+	DiskTotal  uint64
+	DiskUsed   uint64
+	GPUName    string
+	GPUPercent float64
+	GPUTemp    float64
+}
 
-/*
-	Send a refreshMsg once every set interval.
-	Returns a Cmd to tick
-*/
-func refresh() tea.Cmd{
-	return tea.Tick(refreshInterval, func(time.Time) tea.Msg{
+// Initializes the model
+func initialModel() model {
+	spin := spinner.New()
+	spin.Spinner = spinner.Pulse // Default spinner type
+	spin.Style = spinnerStyle
+
+	return model{
+		cursor:  0,
+		spinner: SpinnerModel{Spinner: spin},
+	}
+}
+
+// Init function runs on program start
+func (m model) Init() tea.Cmd {
+	return tea.Batch(refresh(), m.spinner.Spinner.Tick)
+}
+
+// refreshMsg struct to trigger periodic updates
+type refreshMsg struct{}
+
+// Function to trigger periodic updates
+func refresh() tea.Cmd {
+	return tea.Tick(refreshInterval, func(time.Time) tea.Msg {
 		return refreshMsg{}
 	})
 }
 
-
-/*
-	The model struct storesd the app's initial state - Bubbletea boilerplate
-*/
-type model struct {
-	stats []string // items we're concerned about
-	cursor	int // what the curso points at
-	selected map[int]struct{} // what we've selected from our stats
-	PCName string
-	OSName string
-	OSVersion string
-	CPUName string
-	CPUPercent float64
-	CPUTemp float64
-    MemTotal uint64
-	MemPercent float64
-	DiskTotal uint64
-	DiskUsed uint64
-	GPUName string
-	GPUPercent float64
-	GPUTemp float64
-}
-
-func initialModel() model{
-	return model{
-		//our choices of rhings
-		stats: []string{}, // empty for now
-		selected: make(map[int]struct{}), // the keys refer to the indexes of the `choices` slice above.
-	}
-}
-
-
-/*
-	Init can return a Cmd that could perform some initial I/O. 
-*/
-func (m model) Init() tea.Cmd{
-	return refresh() // this means no I/O returned at the moment
-}
-
-
-type refreshMsg struct{}
-
-/*
-  Updates state when changes occur and updates the app's model in turn.
-  Can return a Cmd to invoke more actions.
-*/
+// Update function handles messages
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-    switch msg := msg.(type) {
-		//TODO: Add the cases for the different options.
-    case tea.KeyMsg:
-        if msg.String() == "q" {
-            return m, tea.Quit // instructs BubbleTea to quit
+	var cmd tea.Cmd
+
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		if msg.String() == "q" {
+			return m, tea.Quit
 		}
-    case refreshMsg:
-		// return model{
-		// 	choices:    m.choices,
-		// 	cursor:     m.cursor,
-		// 	selected:   m.selected,
-		// 	CPUPercent: cpu,
-		// 	MemPercent: mem,
-		// }, tea.Tick(refreshInterval, refresh) // This is live loading or something?
+	case refreshMsg:
 		PCName, _ := GetPCName()
 		osName, osVersion, _ := GetOSInfo()
 		cpuName, cpuUse, cpuTemp, _ := GetCPUStats()
 		memTotal, memUse, _ := GetMemoryStats()
 		diskTotal, diskUsed, _ := GetDiskStats()
-		// gpuName,gpuPercent, gpuTemp, _ := GetGPUStats()
 
 		m.PCName = PCName
 		m.OSName, m.OSVersion = osName, osVersion
@@ -96,17 +81,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.MemPercent = memUse
 		m.DiskTotal = diskTotal
 		m.DiskUsed = diskUsed
-		// m.GPUName = gpuName
-		// m.GPUPercent = gpuPercent
-		// m.GPUTemp = gpuTemp
+
 		return m, refresh() // Schedule next refresh
 
-		
+	case spinner.TickMsg:
+		var spinCmd tea.Cmd
+		m.spinner.Spinner, spinCmd = m.spinner.Spinner.Update(msg)
+		return m, spinCmd
 	}
 
-	// Return the updated model to the Bubble Tea runtime for processing.
-    // Note that we're not returning a command.
-    return m, nil
+	return m, cmd
 }
 
 /*
@@ -116,7 +100,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 */
 func (m model) View() string {
 	// TODO: add the logic for how we render stuff.
-    s := "Project Vitals\n\n"
+    s := "Project Vitals\n\n" //TODO: update name
+    s += fmt.Sprintf("Monitoring vitals %s\n", m.spinner.Spinner.View())
 	s += fmt.Sprintf("PC Name: '%s'\n", m.PCName)
 	s += fmt.Sprintf("OS: %s %s\n", m.OSName, m.OSVersion)
 	s += fmt.Sprintf("CPU: %s\n", m.CPUName)
@@ -125,7 +110,12 @@ func (m model) View() string {
 	s += fmt.Sprintf("Memory Total: %d bits (%.2f GB)\n", m.MemTotal, float64(m.MemTotal) / math.Pow10(9))
 	s += fmt.Sprintf("Memory Usage: %.1f%%\n", m.MemPercent)
 	s += fmt.Sprintf("Disk Total: %.2f GB\n", float64(m.DiskTotal) / math.Pow10(9))
-	s += fmt.Sprintf("Disk Used: %.2f GB\n", float64(m.DiskUsed) / math.Pow10(9))
+    diskUsagePercent := 0.0
+    if m.DiskTotal > 0 {
+        diskUsagePercent = (float64(m.DiskUsed) / float64(m.DiskTotal)) * 100
+    }
+    s += fmt.Sprintf("Disk Usage: %.1f%%\n", diskUsagePercent)
+    s += RenderProgressBar(diskUsagePercent, 30) + "\n"
 	s += fmt.Sprintf("Disk Free: %.2f GB\n", float64(m.DiskTotal - m.DiskUsed) / math.Pow10(9))
 	// Uncomment the following lines if GPU stats become available
 	// s += fmt.Sprintf("GPU: %s\n", m.GPUName)
