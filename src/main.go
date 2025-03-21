@@ -3,6 +3,7 @@ package main
 import(
 	"fmt"
 	"os"
+	"math"
 	"time"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -81,27 +82,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// 	CPUPercent: cpu,
 		// 	MemPercent: mem,
 		// }, tea.Tick(refreshInterval, refresh) // This is live loading or something?
-		m.PCName, _ = GetPCName()
-		cpu, _ := GetCPUUsage()
-		cpuTemp, _ := GetCPUStats()
+		PCName, _ := GetPCName()
+		osName, osVersion, _ := GetOSInfo()
+		cpuName, cpuUse, cpuTemp, _ := GetCPUStats()
 		memTotal, memUse, _ := GetMemoryStats()
 		diskTotal, diskUsed, _ := GetDiskStats()
-		
-		gpuName,gpuPercent, gpuTemp, _ := GetGPUStats()
-		osName, osVersion, _ := GetOSInfo()
-		m.CPUName, _ = GetCPUName()
+		// gpuName,gpuPercent, gpuTemp, _ := GetGPUStats()
 
-		m.CPUPercent = cpu
-		m.CPUTemp = cpuTemp
-		m.MemTotal = memTotal // TODO: Convert to MB
+		m.PCName = PCName
+		m.OSName, m.OSVersion = osName, osVersion
+		m.CPUName, m.CPUPercent, m.CPUTemp = cpuName, cpuUse, cpuTemp
+		m.MemTotal = memTotal
 		m.MemPercent = memUse
 		m.DiskTotal = diskTotal
 		m.DiskUsed = diskUsed
-		m.GPUName = gpuName
-		m.GPUPercent = gpuPercent
-		m.GPUTemp = gpuTemp
-		m.OSName = osName
-		m.OSVersion = osVersion
+		// m.GPUName = gpuName
+		// m.GPUPercent = gpuPercent
+		// m.GPUTemp = gpuTemp
 		return m, refresh() // Schedule next refresh
 
 		
@@ -119,10 +116,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 */
 func (m model) View() string {
 	// TODO: add the logic for how we render stuff.
-    s := "SYSTEM MONITOR\n\n"
-    s += fmt.Sprintf("CPU Usage: %.1f%%\n", m.CPUPercent)
-    s += fmt.Sprintf("Memory: %d\n", m.MemTotal)
-    s += fmt.Sprintf("Memory Usage: %.1f%%\n", m.MemPercent)
+    s := "Project Vitals\n\n"
+	s += fmt.Sprintf("PC Name: '%s'\n", m.PCName)
+	s += fmt.Sprintf("OS: %s %s\n", m.OSName, m.OSVersion)
+	s += fmt.Sprintf("CPU: %s\n", m.CPUName)
+	s += fmt.Sprintf("CPU Usage: %.1f%%\n", m.CPUPercent)
+	s += fmt.Sprintf("CPU Temperature: %.1f°C\n", m.CPUTemp)
+	s += fmt.Sprintf("Memory Total: %d bits (%.2f GB)\n", m.MemTotal, float64(m.MemTotal) / math.Pow10(9))
+	s += fmt.Sprintf("Memory Usage: %.1f%%\n", m.MemPercent)
+	s += fmt.Sprintf("Disk Total: %.2f GB\n", float64(m.DiskTotal) / math.Pow10(9))
+	s += fmt.Sprintf("Disk Used: %.2f GB\n", float64(m.DiskUsed) / math.Pow10(9))
+	s += fmt.Sprintf("Disk Free: %.2f GB\n", float64(m.DiskTotal - m.DiskUsed) / math.Pow10(9))
+	// Uncomment the following lines if GPU stats become available
+	// s += fmt.Sprintf("GPU: %s\n", m.GPUName)
+	// s += fmt.Sprintf("GPU Usage: %.1f%%\n", m.GPUPercent)
+	// s += fmt.Sprintf("GPU Temperature: %.1f°C\n", m.GPUTemp)
     s += "\nPress q to quit\n"
     return s
 }
