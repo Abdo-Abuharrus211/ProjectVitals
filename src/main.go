@@ -17,7 +17,8 @@ const refreshInterval = time.Second // Update interval
 type model struct {
 	cursor     int
 	spinner    SpinnerModel
-    progressBar progress.Model
+    diskBar progress.Model
+    memoryBar progress.Model
 
 	PCName     string
 	OSName     string
@@ -36,7 +37,8 @@ type model struct {
 
 // Initializes the model
 func initialModel() model {
-    pbar := progress.New(progress.WithDefaultGradient())
+    dbar := progress.New(progress.WithScaledGradient(barMin, barMax))
+    mbar := progress.New(progress.WithScaledGradient(barMin, barMax))
 	spin := spinner.New()
 	spin.Spinner = spinner.Line // Default spinner type
 	spin.Style = spinnerStyle
@@ -44,7 +46,8 @@ func initialModel() model {
 	return model{
         cursor:      0,
         spinner:     SpinnerModel{Spinner: spin},
-        progressBar: pbar,
+        diskBar: dbar,
+        memoryBar: mbar,
     }
     
 }
@@ -92,12 +95,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         if m.DiskTotal > 0 {
             diskUsage = float64(m.DiskUsed) / float64(m.DiskTotal)
         }
-        progressCmd := m.progressBar.SetPercent(diskUsage)
-        return m, tea.Batch(refresh(), progressCmd)
+        diskProgressCmd := m.diskBar.SetPercent(diskUsage)
+        memoryUsage := m.MemPercent / 100.0
+        memoryProgressCmd := m.memoryBar.SetPercent(memoryUsage)
+        return m, tea.Batch(refresh(), diskProgressCmd, memoryProgressCmd)
     case progress.FrameMsg:
-        progressModel, progressCmd := m.progressBar.Update(msg)
-        m.progressBar = progressModel.(progress.Model)
-        return m, progressCmd
+        diskProgressModel, diskProgressCmd := m.diskBar.Update(msg)
+        m.diskBar = diskProgressModel.(progress.Model)
+        memProgressModel, memProgressCmd := m.memoryBar.Update(msg)
+        m.memoryBar = memProgressModel.(progress.Model)
+        return m, tea.Batch(diskProgressCmd, memProgressCmd)
+    
         
 	case spinner.TickMsg:
 		var spinCmd tea.Cmd
@@ -123,15 +131,17 @@ func (m model) View() string {
     s += fmt.Sprintf("%s%s\n", labelStyle("CPU Usage: "), textStyle(fmt.Sprintf("%.1f%%", m.CPUPercent)))
     s += fmt.Sprintf("%s%s\n", labelStyle("CPU Temperature: "), textStyle(fmt.Sprintf("%.1f°C", m.CPUTemp)))
     s += fmt.Sprintf("%s%s\n", labelStyle("Memory Total: "), textStyle(fmt.Sprintf("%d bits (%.2f GB)", m.MemTotal, float64(m.MemTotal)/math.Pow10(9))))
+    // s += fmt.Sprintf("%s%s\n", labelStyle("Memory Usage: "), textStyle(fmt.Sprintf("%.1f%%", m.MemPercent)))
     s += fmt.Sprintf("%s%s\n", labelStyle("Memory Usage: "), textStyle(fmt.Sprintf("%.1f%%", m.MemPercent)))
+    s += m.memoryBar.View() + "\n"
     s += fmt.Sprintf("%s%s\n", labelStyle("Disk Total: "), textStyle(fmt.Sprintf("%.2f GB", float64(m.DiskTotal)/math.Pow10(9))))
+    s += fmt.Sprintf("%s%s\n", labelStyle("Disk Free: "), textStyle(fmt.Sprintf("%.2f GB", float64(m.DiskTotal-m.DiskUsed)/math.Pow10(9))))
     diskUsagePercent := 0.0
     if m.DiskTotal > 0 {
         diskUsagePercent = (float64(m.DiskUsed) / float64(m.DiskTotal)) * 100
     }
-    s += fmt.Sprintf("%s%s\n", labelStyle("Disk Usage: "), textStyle(fmt.Sprintf("%.1f%%", diskUsagePercent)))
-    s += m.progressBar.View() + "\n" // Use the model’s instance of the progress bar
-    s += fmt.Sprintf("%s%s\n", labelStyle("Disk Free: "), textStyle(fmt.Sprintf("%.2f GB", float64(m.DiskTotal-m.DiskUsed)/math.Pow10(9))))
+    s += fmt.Sprintf("%s%s\n", labelStyle("Disk used: "), textStyle(fmt.Sprintf("%.1f%%", diskUsagePercent)))
+    s += m.diskBar.View() + "\n" // Use the model’s instance of the progress bar
     // Uncomment the following lines if GPU stats become available
     // s += fmt.Sprintf("%s%s\n", labelStyle("GPU: "), textStyle(m.GPUName))
     // s += fmt.Sprintf("%s%s\n", labelStyle("GPU Usage: "), textStyle(fmt.Sprintf("%.1f%%", m.GPUPercent)))

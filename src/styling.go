@@ -36,7 +36,8 @@ var spinners = []spinner.Spinner{
 
 // Styles
 var (
-
+	barMax = "#fd1259"
+	barMin ="#80a5f6"
 	titleStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#c209f9")).Render
 	labelStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#80a5f6")).Render
 	terminalStyle = lipgloss.NewStyle().Background(lipgloss.Color("#020a1d")).Width(100) //TODO: change colors
@@ -69,7 +70,7 @@ func (m SpinnerModel) Update(msg tea.Msg) (SpinnerModel, tea.Cmd) {
 
 
 // Define the gradient colors for progress bars
-var ProgressBar = progress.New(progress.WithScaledGradient("#80a5f6", "#fd1259"))
+var ProgressBar = progress.New(progress.WithScaledGradient(barMin, barMax))
 
 
 // Function to update the progress bar percentage
