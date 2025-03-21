@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/bubbles/spinner"
+	// "github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
 	"strings"
 )
@@ -83,11 +84,41 @@ func RenderProgressBar(percent float64, width int) string {
 		empty = 0
 	}
 
-	filledStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#fd1259")) // Green
-	emptyStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#bcd2ab")) // Grey
+	// Gradient colors for progress
+	var color string
+	switch {
+	case percent < 34:
+		color = "#f135cc" // Light Blue (Low Usage)
+	case percent < 67:
+		color = "#c209f9" // Purple (Medium Usage)
+	default:
+		color = "#fd1259" // Pink/Red (High Usage)
+	}
+	filledStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(color))
+	emptyStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#bcd2ab")) // Light Grey
 
+	// Construct the progress bar
 	bar := filledStyle.Render(strings.Repeat("█", filled)) +
 		emptyStyle.Render(strings.Repeat("░", empty))
 
 	return bar
 }
+
+// // Define the gradient colors for progress bars
+// var ProgressBar = progress.New(progress.WithScaledGradient("#80a5f6", "#fd1259"))
+
+
+// // Function to update the progress bar percentage
+// func UpdateProgressBar(value float64) tea.Cmd {
+// 	if value < 0 {
+// 		value = 0
+// 	} else if value > 1 {
+// 		value = 1
+// 	}
+// 	return ProgressBar.SetPercent(value)
+// }
+
+// // Function to render the progress bar
+// func RenderProgressBar() string {
+// 	return ProgressBar.View()
+// }
