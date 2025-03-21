@@ -5,7 +5,7 @@ import (
 	"os"
 	// "runtime"
 	"time"
-    "strings"
+    // "strings"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/host"
@@ -35,30 +35,32 @@ func GetOSInfo() (string, string, error) {
 
 // Fetch CPU usage percentage
 func GetCPUStats() (string, float64, float64, error) {
-	cpuPercent, err := cpu.Percent(time.Second, false)
-	if err != nil {
-		return "", 0.0, 0.0, err
-	}
     cpuInfo, err := cpu.Info()
-	if err != nil {
-		return "", 0.0, 0.0, err
-	}
+    if err != nil {
+        return "", 0.0, 0.0, err
+    }
 
     mainCPU := cpuInfo[0]
-    cpuData := []string{mainCPU.Model, mainCPU.Model, mainCPU.CoreID}
-    cpuName := strings.Join(cpuData, ",")
+    cpuName := mainCPU.ModelName
+
+    cpuPercent, err := cpu.Percent(time.Second, false)
+    if err != nil {
+        return "", 0.0, 0.0, err
+    }
 
     var cpuTemp float64
     temps, err := sensors.SensorsTemperatures()
-	if err != nil {
-		return "", 0.0, 0.0, err
-	}
+    if err != nil {
+        return "", 0.0, 0.0, err
+    }
 	for _, temp := range temps {
-		if temp.SensorKey == "coretemp" { // Adjust based on OS
+		if temp.SensorKey == "coretemp" || temp.SensorKey == "Package id 0" { // Adjust this based on OS!
 			cpuTemp = temp.Temperature
+			break
 		}
 	}
-	return cpuName, cpuPercent[0], cpuTemp, nil
+
+    return cpuName, cpuPercent[0], cpuTemp, nil
 }
 
 
