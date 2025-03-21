@@ -5,7 +5,6 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
-	// "strings"
 )
 
 
@@ -44,6 +43,22 @@ var (
 	textStyle    = lipgloss.NewStyle().Background(lipgloss.Color("#020a1d")).Foreground(lipgloss.Color("#f2f6ee")).Render
 	spinnerStyle = lipgloss.NewStyle().Background(lipgloss.Color("#020a1d")).Foreground(lipgloss.Color("#ff06b5"))
 	helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#917faa")).Render
+
+	// tableStyle := lipgloss.NewStyle().BorderStyle(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("228")).BorderTop(true).BorderLeft(true)
+	// tableStyle.Header = table.Header.BorderStyle(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("240")).BorderBottom(true).Bold(true)
+	TableStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("#c209f9")).
+			BorderTop(true).
+			BorderLeft(true).
+			BorderBottom(true).
+			BorderRight(true)
+
+	TableHeaderStyle = lipgloss.NewStyle().
+				BorderStyle(lipgloss.NormalBorder()).
+				BorderForeground(lipgloss.Color("#80a5f6")).
+				BorderBottom(true).
+				Bold(true)
 )
 
 // SpinnerModel holds the spinner state

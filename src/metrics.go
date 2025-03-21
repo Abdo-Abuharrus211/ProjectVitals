@@ -81,7 +81,7 @@ func GetDiskStats() (uint64, uint64, error) {
 }
 
 
-// Fetch GPU details (limited support)
+// Fetch GPU details (limited support) - Actually not supported!!!
 // func GetGPUStats() (string, float64, float64, error) {
 // 	procs, err := process.Processes()
 // 	if err != nil {

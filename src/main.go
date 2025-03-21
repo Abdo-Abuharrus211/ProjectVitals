@@ -7,8 +7,10 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
     progress "github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/table"
 )
 
 const refreshInterval = time.Second // Update interval
@@ -19,6 +21,7 @@ type model struct {
 	spinner    SpinnerModel
     diskBar progress.Model
     memoryBar progress.Model
+	statsTable table.Model
 
 	PCName     string
 	OSName     string
@@ -35,19 +38,35 @@ type model struct {
 	GPUTemp    float64
 }
 
-// Initializes the model
+// Initialize the model with Bubble Tea components
 func initialModel() model {
     dbar := progress.New(progress.WithScaledGradient(barMin, barMax))
     mbar := progress.New(progress.WithScaledGradient(barMin, barMax))
 	spin := spinner.New()
-	spin.Spinner = spinner.Line // Default spinner type
+	spin.Spinner = spinner.Dot // Default spinner type
 	spin.Style = spinnerStyle
+	columns := []table.Column{
+        {Title: "Stat", Width: 20},
+        {Title: "Value", Width: 30},
+    }
+    t := table.New(
+        table.WithColumns(columns),
+        table.WithFocused(true),
+        table.WithHeight(10),
+    )
+    customStyles := table.Styles{
+        Header:   TableHeaderStyle,
+        Selected: lipgloss.NewStyle().Foreground(lipgloss.Color("#f2f6ee")),
+        Cell:     lipgloss.NewStyle().Foreground(lipgloss.Color("#f2f6ee")),
+	}
+	t.SetStyles(customStyles)
 
 	return model{
         cursor:      0,
         spinner:     SpinnerModel{Spinner: spin},
         diskBar: dbar,
         memoryBar: mbar,
+		statsTable: t,
     }
     
 }
@@ -67,7 +86,27 @@ func refresh() tea.Cmd {
 	})
 }
 
-// Update function handles messages
+/*
+	Update the Stats Table on each refresh, simply rewrite the model's latest data
+*/
+func (m *model) updateStatsTable() {
+    rows := []table.Row{
+        {"PC Name", m.PCName},
+        {"OS", m.OSName + " " + m.OSVersion},
+        {"CPU", m.CPUName},
+        {"CPU Usage", fmt.Sprintf("%.1f%%", m.CPUPercent)},
+        {"CPU Temperature", fmt.Sprintf("%.1f°C", m.CPUTemp)},
+        {"Memory Total", fmt.Sprintf("%.2f GB", float64(m.MemTotal)/math.Pow10(9))},
+        {"Disk Total", fmt.Sprintf("%.2f GB", float64(m.DiskTotal)/math.Pow10(9))},
+        {"Disk Free", fmt.Sprintf("%.2f GB", float64(m.DiskTotal-m.DiskUsed)/math.Pow10(9))},
+    }
+    m.statsTable.SetRows(rows)
+}
+
+
+/*
+	 Update function handles messages and interactions, in turn updates TUI
+*/
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
@@ -98,7 +137,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         diskProgressCmd := m.diskBar.SetPercent(diskUsage)
         memoryUsage := m.MemPercent / 100.0
         memoryProgressCmd := m.memoryBar.SetPercent(memoryUsage)
+		m.updateStatsTable()
         return m, tea.Batch(refresh(), diskProgressCmd, memoryProgressCmd)
+
     case progress.FrameMsg:
         diskProgressModel, diskProgressCmd := m.diskBar.Update(msg)
         m.diskBar = diskProgressModel.(progress.Model)
@@ -116,40 +157,31 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+
 /*
 	Render UI in terminal.
 	Parses the model's state and stringies it, the string becomes the UI.
 	BubbleTea handles all the redrawing.
 */
 func (m model) View() string {
-    // s := "Project Vitals\n\n" //TODO: update name
-    s := fmt.Sprintf("%s\n\n", titleStyle("ProjectVitalis"))
-    s += fmt.Sprintf("%s%s\n", labelStyle("Monitoring system vitals "), m.spinner.Spinner.View())
-    s += fmt.Sprintf("%s%s\n", labelStyle("PC Name: "), textStyle("'" + m.PCName + "'"))
-    s += fmt.Sprintf("%s%s%s\n", labelStyle("OS: "), textStyle(m.OSName), textStyle(m.OSVersion))
-    s += fmt.Sprintf("%s%s\n", labelStyle("CPU: "), textStyle(m.CPUName))
-    s += fmt.Sprintf("%s%s\n", labelStyle("CPU Usage: "), textStyle(fmt.Sprintf("%.1f%%", m.CPUPercent)))
-    s += fmt.Sprintf("%s%s\n", labelStyle("CPU Temperature: "), textStyle(fmt.Sprintf("%.1f°C", m.CPUTemp)))
-    s += fmt.Sprintf("%s%s\n", labelStyle("Memory Total: "), textStyle(fmt.Sprintf("%d bits (%.2f GB)", m.MemTotal, float64(m.MemTotal)/math.Pow10(9))))
-    // s += fmt.Sprintf("%s%s\n", labelStyle("Memory Usage: "), textStyle(fmt.Sprintf("%.1f%%", m.MemPercent)))
+	s := fmt.Sprintf("%s\n\n", titleStyle("ProjectVitalis"))
+    s += fmt.Sprintf("%s%s\n\n", labelStyle("Monitoring system vitals "), m.spinner.Spinner.View())
+    s += TableStyle.Render(m.statsTable.View()) + "\n\n"
+
     s += fmt.Sprintf("%s%s\n", labelStyle("Memory Usage: "), textStyle(fmt.Sprintf("%.1f%%", m.MemPercent)))
-    s += m.memoryBar.View() + "\n"
-    s += fmt.Sprintf("%s%s\n", labelStyle("Disk Total: "), textStyle(fmt.Sprintf("%.2f GB", float64(m.DiskTotal)/math.Pow10(9))))
-    s += fmt.Sprintf("%s%s\n", labelStyle("Disk Free: "), textStyle(fmt.Sprintf("%.2f GB", float64(m.DiskTotal-m.DiskUsed)/math.Pow10(9))))
+    s += m.memoryBar.View() + "\n\n"
+    
     diskUsagePercent := 0.0
     if m.DiskTotal > 0 {
         diskUsagePercent = (float64(m.DiskUsed) / float64(m.DiskTotal)) * 100
     }
-    s += fmt.Sprintf("%s%s\n", labelStyle("Disk used: "), textStyle(fmt.Sprintf("%.1f%%", diskUsagePercent)))
-    s += m.diskBar.View() + "\n" // Use the model’s instance of the progress bar
-    // Uncomment the following lines if GPU stats become available
-    // s += fmt.Sprintf("%s%s\n", labelStyle("GPU: "), textStyle(m.GPUName))
-    // s += fmt.Sprintf("%s%s\n", labelStyle("GPU Usage: "), textStyle(fmt.Sprintf("%.1f%%", m.GPUPercent)))
-    // s += fmt.Sprintf("%s%s\n", labelStyle("GPU Temperature: "), textStyle(fmt.Sprintf("%.1f°C", m.GPUTemp)))
+    s += fmt.Sprintf("%s%s\n", labelStyle("Disk Usage: "), textStyle(fmt.Sprintf("%.1f%%", diskUsagePercent)))
+    s += m.diskBar.View() + "\n"
+    
     s += fmt.Sprintf("\n%s\n", helpStyle("Press `q` to quit"))
-    s = terminalStyle.Render(s)
-    return s
+    return terminalStyle.Render(s)
 }
+
 /*
 	Main function to run the program.
 */
