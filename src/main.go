@@ -99,29 +99,30 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	BubbleTea handles all the redrawing.
 */
 func (m model) View() string {
-	// TODO: add the logic for how we render stuff.
-    s := "Project Vitals\n\n" //TODO: update name
-    s += fmt.Sprintf("Monitoring vitals %s\n", m.spinner.Spinner.View())
-	s += fmt.Sprintf("PC Name: '%s'\n", m.PCName)
-	s += fmt.Sprintf("OS: %s %s\n", m.OSName, m.OSVersion)
-	s += fmt.Sprintf("CPU: %s\n", m.CPUName)
-	s += fmt.Sprintf("CPU Usage: %.1f%%\n", m.CPUPercent)
-	s += fmt.Sprintf("CPU Temperature: %.1f°C\n", m.CPUTemp)
-	s += fmt.Sprintf("Memory Total: %d bits (%.2f GB)\n", m.MemTotal, float64(m.MemTotal) / math.Pow10(9))
-	s += fmt.Sprintf("Memory Usage: %.1f%%\n", m.MemPercent)
-	s += fmt.Sprintf("Disk Total: %.2f GB\n", float64(m.DiskTotal) / math.Pow10(9))
+    // s := "Project Vitals\n\n" //TODO: update name
+    s := fmt.Sprintf("%s\n\n", titleStyle("ProjectVitalis"))
+    s += fmt.Sprintf("%s%s\n", labelStyle("Monitoring system vitals "), m.spinner.Spinner.View())
+    s += fmt.Sprintf("%s%s\n", labelStyle("PC Name: "), textStyle("'" + m.PCName + "'"))
+    s += fmt.Sprintf("%s%s%s\n", labelStyle("OS: "), textStyle(m.OSName), textStyle(m.OSVersion))
+    s += fmt.Sprintf("%s%s\n", labelStyle("CPU: "), textStyle(m.CPUName))
+    s += fmt.Sprintf("%s%s\n", labelStyle("CPU Usage: "), textStyle(fmt.Sprintf("%.1f%%", m.CPUPercent)))
+    s += fmt.Sprintf("%s%s\n", labelStyle("CPU Temperature: "), textStyle(fmt.Sprintf("%.1f°C", m.CPUTemp)))
+    s += fmt.Sprintf("%s%s\n", labelStyle("Memory Total: "), textStyle(fmt.Sprintf("%d bits (%.2f GB)", m.MemTotal, float64(m.MemTotal)/math.Pow10(9))))
+    s += fmt.Sprintf("%s%s\n", labelStyle("Memory Usage: "), textStyle(fmt.Sprintf("%.1f%%", m.MemPercent)))
+    s += fmt.Sprintf("%s%s\n", labelStyle("Disk Total: "), textStyle(fmt.Sprintf("%.2f GB", float64(m.DiskTotal)/math.Pow10(9))))
     diskUsagePercent := 0.0
     if m.DiskTotal > 0 {
         diskUsagePercent = (float64(m.DiskUsed) / float64(m.DiskTotal)) * 100
     }
-    s += fmt.Sprintf("Disk Usage: %.1f%%\n", diskUsagePercent)
-    s += RenderProgressBar(diskUsagePercent, 30) + "\n"
-	s += fmt.Sprintf("Disk Free: %.2f GB\n", float64(m.DiskTotal - m.DiskUsed) / math.Pow10(9))
-	// Uncomment the following lines if GPU stats become available
-	// s += fmt.Sprintf("GPU: %s\n", m.GPUName)
-	// s += fmt.Sprintf("GPU Usage: %.1f%%\n", m.GPUPercent)
-	// s += fmt.Sprintf("GPU Temperature: %.1f°C\n", m.GPUTemp)
+    s += fmt.Sprintf("%s%s\n", labelStyle("Disk Usage: "), textStyle(fmt.Sprintf("%.1f%%", diskUsagePercent)))
+    s += RenderProgressBar(diskUsagePercent, 40) + "\n"
+    s += fmt.Sprintf("%s%s\n", labelStyle("Disk Free: "), textStyle(fmt.Sprintf("%.2f GB", float64(m.DiskTotal-m.DiskUsed)/math.Pow10(9))))
+    // Uncomment the following lines if GPU stats become available
+    // s += fmt.Sprintf("%s%s\n", labelStyle("GPU: "), textStyle(m.GPUName))
+    // s += fmt.Sprintf("%s%s\n", labelStyle("GPU Usage: "), textStyle(fmt.Sprintf("%.1f%%", m.GPUPercent)))
+    // s += fmt.Sprintf("%s%s\n", labelStyle("GPU Temperature: "), textStyle(fmt.Sprintf("%.1f°C", m.GPUTemp)))
     s += "\nPress q to quit\n"
+    s = terminalStyle.Render(s)
     return s
 }
 /*

@@ -35,8 +35,12 @@ var spinners = []spinner.Spinner{
 
 // Styles
 var (
-	textStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Render
-	spinnerStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("69"))
+
+	titleStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#c209f9")).Render
+	labelStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#80a5f6")).Render
+	terminalStyle = lipgloss.NewStyle().Background(lipgloss.Color("#020a1d")).Width(100) //TODO: change colors
+	textStyle    = lipgloss.NewStyle().Background(lipgloss.Color("#020a1d")).Foreground(lipgloss.Color("#f2f6ee")).Render
+	spinnerStyle = lipgloss.NewStyle().Background(lipgloss.Color("#020a1d")).Foreground(lipgloss.Color("#0B666A"))
 	helpStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Render
 )
 
@@ -79,8 +83,8 @@ func RenderProgressBar(percent float64, width int) string {
 		empty = 0
 	}
 
-	filledStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00")) // Green
-	emptyStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#444444")) // Grey
+	filledStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#fd1259")) // Green
+	emptyStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#bcd2ab")) // Grey
 
 	bar := filledStyle.Render(strings.Repeat("█", filled)) +
 		emptyStyle.Render(strings.Repeat("░", empty))
