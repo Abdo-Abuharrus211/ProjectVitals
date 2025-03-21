@@ -1,4 +1,4 @@
-module project-vitals
+module projectVitals
 
 go 1.24.1
 

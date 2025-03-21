@@ -3,8 +3,22 @@ package main
 import(
 	"fmt"
 	"os"
+	"time"
 	tea "github.com/charmbracelet/bubbletea"
 )
+
+const refreshInterval = time.Second // this is 1 sec
+
+
+/*
+	Send a refreshMsg once every set interval.
+	Returns a Cmd to tick
+*/
+func refresh() tea.Cmd{
+	return tea.Tick(refreshInterval, func(time.Time) tea.Msg{
+		return refreshMsg{}
+	})
+}
 
 
 /*
@@ -21,27 +35,20 @@ type model struct {
 func initialModel() model{
 	return model{
 		//our choices of rhings
-		choices: []string{} // empty for now
-		selected: make(map[int]struct{}) // the keys refer to the indexes of the `choices` slice above.
+		stats: []string{}, // empty for now
+		selected: make(map[int]struct{}), // the keys refer to the indexes of the `choices` slice above.
 	}
 }
-
 
 
 /*
 	Init can return a Cmd that could perform some initial I/O. 
 */
-func (m model) Init() tea.cmd{
+func (m model) Init() tea.Cmd{
 	return nil // this means no I/O returned at the moment
 }
 
-func (m model) View() string {
-    s := "SYSTEM MONITOR\n\n"
-    s += fmt.Sprintf("CPU Usage: %.1f%%\n", m.CPUPercent)
-    s += fmt.Sprintf("Memory Usage: %.1f%%\n", m.MemPercent)
-    s += "\nPress q to quit\n"
-    return s
-}
+
 type refreshMsg struct{}
 
 /*
@@ -56,13 +63,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
             return m, tea.Quit // instructs BubbleTea to quit
 		}
     case refreshMsg:
-		return model{
-			choices:    m.choices,
-			cursor:     m.cursor,
-			selected:   m.selected,
-			CPUPercent: cpu,
-			MemPercent: mem,
-		}, tea.Tick(refreshInterval, refresh) // This is live loading or something?
+		// return model{
+		// 	choices:    m.choices,
+		// 	cursor:     m.cursor,
+		// 	selected:   m.selected,
+		// 	CPUPercent: cpu,
+		// 	MemPercent: mem,
+		// }, tea.Tick(refreshInterval, refresh) // This is live loading or something?
+		cpu, _ := GetCPUUsage()
+		mem, _ := GetMemUsage()
+		m.CPUPercent = cpu
+		m.MemPercent = mem
+		return m, refresh() // Schedule next refresh
+
 		
 	}
 
@@ -77,9 +90,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	BubbleTea handles all the redrawing.
 */
 func (m model) View() string {
-	// add the logic for how we render stuff.
+	// TODO: add the logic for how we render stuff.
+    s := "SYSTEM MONITOR\n\n"
+    s += fmt.Sprintf("CPU Usage: %.1f%%\n", m.CPUPercent)
+    s += fmt.Sprintf("Memory Usage: %.1f%%\n", m.MemPercent)
+    s += "\nPress q to quit\n"
+    return s
 }
-
 /*
 	Main function to run the program.
 */
@@ -87,6 +104,6 @@ func main(){
 	monitorProgram := tea.NewProgram(initialModel())
 	if _, err := monitorProgram.Run(); err != nil {
 		fmt.Printf("Error occured: %v", err)
-		os.exit(1)
+		os.Exit(1)
 	}
 }
