@@ -28,8 +28,19 @@ type model struct {
 	stats []string // items we're concerned about
 	cursor	int // what the curso points at
 	selected map[int]struct{} // what we've selected from our stats
+	PCName string
+	OSName string
+	OSVersion string
+	CPUName string
 	CPUPercent float64
-    MemPercent float64
+	CPUTemp float64
+    MemTotal uint64
+	MemPercent float64
+	DiskTotal uint64
+	DiskUsed uint64
+	GPUName string
+	GPUPercent float64
+	GPUTemp float64
 }
 
 func initialModel() model{
@@ -45,7 +56,7 @@ func initialModel() model{
 	Init can return a Cmd that could perform some initial I/O. 
 */
 func (m model) Init() tea.Cmd{
-	return nil // this means no I/O returned at the moment
+	return refresh() // this means no I/O returned at the moment
 }
 
 
@@ -70,10 +81,27 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// 	CPUPercent: cpu,
 		// 	MemPercent: mem,
 		// }, tea.Tick(refreshInterval, refresh) // This is live loading or something?
+		m.PCName, _ = GetPCName()
 		cpu, _ := GetCPUUsage()
-		mem, _ := GetMemUsage()
+		cpuTemp, _ := GetCPUStats()
+		memTotal, memUse, _ := GetMemoryStats()
+		diskTotal, diskUsed, _ := GetDiskStats()
+		
+		gpuName,gpuPercent, gpuTemp, _ := GetGPUStats()
+		osName, osVersion, _ := GetOSInfo()
+		m.CPUName, _ = GetCPUName()
+
 		m.CPUPercent = cpu
-		m.MemPercent = mem
+		m.CPUTemp = cpuTemp
+		m.MemTotal = memTotal // TODO: Convert to MB
+		m.MemPercent = memUse
+		m.DiskTotal = diskTotal
+		m.DiskUsed = diskUsed
+		m.GPUName = gpuName
+		m.GPUPercent = gpuPercent
+		m.GPUTemp = gpuTemp
+		m.OSName = osName
+		m.OSVersion = osVersion
 		return m, refresh() // Schedule next refresh
 
 		
@@ -93,6 +121,7 @@ func (m model) View() string {
 	// TODO: add the logic for how we render stuff.
     s := "SYSTEM MONITOR\n\n"
     s += fmt.Sprintf("CPU Usage: %.1f%%\n", m.CPUPercent)
+    s += fmt.Sprintf("Memory: %d\n", m.MemTotal)
     s += fmt.Sprintf("Memory Usage: %.1f%%\n", m.MemPercent)
     s += "\nPress q to quit\n"
     return s
