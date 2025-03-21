@@ -1,4 +1,4 @@
-# Project Vitals
+# Project Vitalis
 An in terminal PC stats monitor built in Go, using [Bubble Tea](https://github.com/charmbracelet/bubbletea) and [gopsutil](https://github.com/shirou/gopsutil) .
 
 ![thumbnail](thumbnail.png?raw=true)
@@ -31,7 +31,7 @@ I wanted to build a terminal-based app to monitor PC vitals stats,
 I've yet to build this project as it's still a work in progress...
 
 So to run it: 
-1. Navigate to `ProjectVitals/src/` in your terminal.
+1. Navigate to `ProjectVitalis/src/` in your terminal.
 2. Enter `go run .`, then the TUI would appear in your terminal.
 ## License
 
